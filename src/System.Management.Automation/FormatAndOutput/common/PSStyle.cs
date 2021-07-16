@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
+
 namespace System.Management.Automation
 {
     #region OutputRendering
@@ -23,16 +25,28 @@ namespace System.Management.Automation
     }
     #endregion OutputRendering
 
+    /// <summary>
+    /// Defines the options for views of progress rendering.
+    /// </summary>
+    public enum ProgressView
+    {
+        /// <summary>Render progress using minimal space.</summary>
+        Minimal = 0,
+
+        /// <summary>Classic rendering of progress.</summary>
+        Classic = 1,
+    }
+    
     #region PSStyle
     /// <summary>
     /// Contains configuration for how PowerShell renders text.
     /// </summary>
-    public class PSStyle
+    public sealed class PSStyle
     {
         /// <summary>
         /// Contains foreground colors.
         /// </summary>
-        public class ForegroundColor
+        public sealed class ForegroundColor
         {
             /// <summary>
             /// Gets the color black.
@@ -147,7 +161,7 @@ namespace System.Management.Automation
         /// <summary>
         /// Contains background colors.
         /// </summary>
-        public class BackgroundColor
+        public sealed class BackgroundColor
         {
             /// <summary>
             /// Gets the color black.
@@ -260,9 +274,35 @@ namespace System.Management.Automation
         }
 
         /// <summary>
+        /// Contains configuration for the progress bar visualization.
+        /// </summary>
+        public sealed class ProgressConfiguration
+        {
+            /// <summary>
+            /// Gets or sets the style for progress bar.
+            /// </summary>
+            public string Style { get; set; } = "\x1b[33;1m";
+
+            /// <summary>
+            /// Gets or sets the max width of the progress bar.
+            /// </summary>
+            public int MaxWidth { get; set; } = 120;
+
+            /// <summary>
+            /// Gets or sets the view for progress bar.
+            /// </summary>
+            public ProgressView View { get; set; } = ProgressView.Minimal;
+
+            /// <summary>
+            /// Gets or sets a value indicating whether to use Operating System Command (OSC) control sequences 'ESC ]9;4;' to show indicator in terminal.
+            /// </summary>
+            public bool UseOSCIndicator { get; set; } = false;
+        }
+
+        /// <summary>
         /// Contains formatting styles for steams and objects.
         /// </summary>
-        public class FormattingData
+        public sealed class FormattingData
         {
             /// <summary>
             /// Gets or sets the accent style for formatting.
@@ -296,6 +336,55 @@ namespace System.Management.Automation
         }
 
         /// <summary>
+        /// Contains formatting styles for FileInfo objects.
+        /// </summary>
+        public sealed class FileInfoFormatting
+        {
+            /// <summary>
+            /// Gets or sets the style for directories.
+            /// </summary>
+            public string Directory { get; set; } = "\x1b[44;1m";
+
+            /// <summary>
+            /// Gets or sets the style for symbolic links.
+            /// </summary>
+            public string SymbolicLink { get; set; } = "\x1b[36;1m";
+
+            /// <summary>
+            /// Gets or sets the style for executables.
+            /// </summary>
+            public string Executable { get; set; } = "\x1b[32;1m";
+
+            /// <summary>
+            /// Gets the style for archive.
+            /// </summary>
+            public Dictionary<string, string> Extension { get; }
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="FileInfoFormatting"/> class.
+            /// </summary>
+            public FileInfoFormatting()
+            {
+                Extension = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                // archives
+                Extension.Add(".zip", "\x1b[31;1m");
+                Extension.Add(".tgz", "\x1b[31;1m");
+                Extension.Add(".gz", "\x1b[31;1m");
+                Extension.Add(".tar", "\x1b[31;1m");
+                Extension.Add(".nupkg", "\x1b[31;1m");
+                Extension.Add(".cab", "\x1b[31;1m");
+                Extension.Add(".7z", "\x1b[31;1m");
+
+                // powershell
+                Extension.Add(".ps1", "\x1b[33;1m");
+                Extension.Add(".psd1", "\x1b[33;1m");
+                Extension.Add(".psm1", "\x1b[33;1m");
+                Extension.Add(".ps1xml", "\x1b[33;1m");
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the rendering mode for output.
         /// </summary>
         public OutputRendering OutputRendering { get; set; } = OutputRendering.Automatic;
@@ -308,12 +397,12 @@ namespace System.Management.Automation
         /// <summary>
         /// Gets value to turn off blink.
         /// </summary>
-        public string BlinkOff { get; } = "\x1b[5m";
+        public string BlinkOff { get; } = "\x1b[25m";
 
         /// <summary>
         /// Gets value to turn on blink.
         /// </summary>
-        public string Blink { get; } = "\x1b[25m";
+        public string Blink { get; } = "\x1b[5m";
 
         /// <summary>
         /// Gets value to turn off bold.
@@ -366,9 +455,35 @@ namespace System.Management.Automation
         public string Underline { get; } = "\x1b[4m";
 
         /// <summary>
+        /// Gets value to turn off strikethrough.
+        /// </summary>
+        public string StrikethroughOff { get; } = "\x1b[29m";
+
+        /// <summary>
+        /// Gets value to turn on strikethrough.
+        /// </summary>
+        public string Strikethrough { get; } = "\x1b[9m";
+
+        /// <summary>
+        /// Gets ANSI representation of a hyperlink.
+        /// </summary>
+        /// <param name="text">Text describing the link.</param>
+        /// <param name="link">A valid hyperlink.</param>
+        /// <returns>String representing ANSI code for the hyperlink.</returns>
+        public string FormatHyperlink(string text, Uri link)
+        {
+            return $"\x1b]8;;{link}\x1b\\{text}\x1b]8;;\x1b\\";
+        }
+
+        /// <summary>
         /// Gets the formatting rendering settings.
         /// </summary>
         public FormattingData Formatting { get; }
+
+        /// <summary>
+        /// Gets the configuration for progress rendering.
+        /// </summary>
+        public ProgressConfiguration Progress { get; }
 
         /// <summary>
         /// Gets foreground colors.
@@ -380,13 +495,20 @@ namespace System.Management.Automation
         /// </summary>
         public BackgroundColor Background { get; }
 
+        /// <summary>
+        /// Gets FileInfo colors.
+        /// </summary>
+        public FileInfoFormatting FileInfo { get; }
+
         private static readonly PSStyle s_psstyle = new PSStyle();
 
         private PSStyle()
         {
             Formatting = new FormattingData();
+            Progress   = new ProgressConfiguration();
             Foreground = new ForegroundColor();
             Background = new BackgroundColor();
+            FileInfo = new FileInfoFormatting();
         }
 
         /// <summary>
