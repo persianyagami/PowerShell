@@ -159,12 +159,12 @@ namespace Microsoft.PowerShell.Commands
         /// Dictionary to be used by Measure-Object implementation.
         /// Keys are strings. Keys are compared with OrdinalIgnoreCase.
         /// </summary>
-        /// <typeparam name="V">Value type.</typeparam>
-        private class MeasureObjectDictionary<V> : Dictionary<string, V>
-            where V : new()
+        /// <typeparam name="TValue">Value type.</typeparam>
+        private sealed class MeasureObjectDictionary<TValue> : Dictionary<string, TValue>
+            where TValue : new()
         {
             /// <summary>
-            /// Initializes a new instance of the <see cref="MeasureObjectDictionary{V}"/> class.
+            /// Initializes a new instance of the <see cref="MeasureObjectDictionary{TValue}"/> class.
             /// Default ctor.
             /// </summary>
             internal MeasureObjectDictionary() : base(StringComparer.OrdinalIgnoreCase)
@@ -181,12 +181,12 @@ namespace Microsoft.PowerShell.Commands
             /// <returns>
             /// The existing value, or a newly-created value.
             /// </returns>
-            public V EnsureEntry(string key)
+            public TValue EnsureEntry(string key)
             {
-                V val;
+                TValue val;
                 if (!TryGetValue(key, out val))
                 {
-                    val = new V();
+                    val = new TValue();
                     this[key] = val;
                 }
 
@@ -200,7 +200,7 @@ namespace Microsoft.PowerShell.Commands
         /// what mode we're in.
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses")]
-        private class Statistics
+        private sealed class Statistics
         {
             // Common properties
             internal int count = 0;
@@ -561,8 +561,7 @@ namespace Microsoft.PowerShell.Commands
         /// <param name="objValue">The value to analyze.</param>
         private void AnalyzeValue(string propertyName, object objValue)
         {
-            if (propertyName == null)
-                propertyName = thisObject;
+            propertyName ??= thisObject;
 
             Statistics stat = _statistics.EnsureEntry(propertyName);
 
@@ -792,9 +791,9 @@ namespace Microsoft.PowerShell.Commands
         {
             Diagnostics.Assert(Property != null, "no property and no InputObject should have been addressed");
             ErrorRecord errorRecord = new(
-                    PSTraceSource.NewArgumentException("Property"),
+                    PSTraceSource.NewArgumentException(propertyName),
                     errorId,
-                    ErrorCategory.InvalidArgument,
+                    ErrorCategory.ObjectNotFound,
                     null);
             errorRecord.ErrorDetails = new ErrorDetails(
                 this, "MeasureObjectStrings", "PropertyNotFound", propertyName);
@@ -820,9 +819,12 @@ namespace Microsoft.PowerShell.Commands
                 Statistics stat = _statistics[propertyName];
                 if (stat.count == 0 && Property != null)
                 {
-                    // Why are there two different ids for this error?
-                    string errorId = (IsMeasuringGeneric) ? "GenericMeasurePropertyNotFound" : "TextMeasurePropertyNotFound";
-                    WritePropertyNotFoundError(propertyName, errorId);
+                    if (Context.IsStrictVersion(2))
+                    {
+                        string errorId = (IsMeasuringGeneric) ? "GenericMeasurePropertyNotFound" : "TextMeasurePropertyNotFound";
+                        WritePropertyNotFoundError(propertyName, errorId);
+                    }
+
                     continue;
                 }
 

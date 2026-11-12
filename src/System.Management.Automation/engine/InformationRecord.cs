@@ -14,7 +14,7 @@ namespace System.Management.Automation
     /// which, according to host or user preference, forwards that information on to the host for rendering to the user.
     /// </remarks>
     /// <seealso cref="System.Management.Automation.Cmdlet.WriteInformation(object, string[])"/>
-    [DataContract()]
+    [DataContract]
     public class InformationRecord
     {
         /// <summary>
@@ -96,20 +96,21 @@ namespace System.Management.Automation
         {
             get
             {
-                if (this._user == null)
-                {
-                    // domain\user on Windows, just user on Unix
+                // domain\user on Windows, just user on Unix
+                this._user ??=
 #if UNIX
-                    this._user = Environment.UserName;
+                    Environment.UserName;
 #else
-                    this._user = Environment.UserDomainName + "\\" + Environment.UserName;
+                    Environment.UserDomainName + "\\" + Environment.UserName;
 #endif
-                }
 
                 return _user;
             }
 
-            set { _user = value; }
+            set
+            {
+                _user = value;
+            }
         }
 
         private string _user;
@@ -143,7 +144,10 @@ namespace System.Management.Automation
                 return this._processId.Value;
             }
 
-            set { _processId = value; }
+            set
+            {
+                _processId = value;
+            }
         }
 
         private uint? _processId;

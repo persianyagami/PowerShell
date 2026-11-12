@@ -8,6 +8,7 @@ using System.Management.Automation;
 using System.Management.Automation.Internal;
 using System.Management.Automation.Remoting;
 using System.Management.Automation.Runspaces;
+using System.Runtime.InteropServices;
 
 using Dbg = System.Management.Automation.Diagnostics;
 
@@ -69,7 +70,7 @@ namespace Microsoft.PowerShell.Commands
         /// <summary>
         /// This parameters specifies the appname which identifies the connection
         /// end point on the remote machine. If this parameter is not specified
-        /// then the value specified in DEFAULTREMOTEAPPNAME will be used. If thats
+        /// then the value specified in DEFAULTREMOTEAPPNAME will be used. If that's
         /// not specified as well, then "WSMAN" will be used.
         /// </summary>
         [Parameter(ValueFromPipelineByPropertyName = true,
@@ -78,7 +79,10 @@ namespace Microsoft.PowerShell.Commands
                    ParameterSetName = GetPSSessionCommand.ComputerInstanceIdParameterSet)]
         public string ApplicationName
         {
-            get { return _appName; }
+            get
+            {
+                return _appName;
+            }
 
             set
             {
@@ -158,7 +162,7 @@ namespace Microsoft.PowerShell.Commands
         [Parameter(ParameterSetName = GetPSSessionCommand.ContainerIdParameterSet)]
         [Parameter(ParameterSetName = GetPSSessionCommand.VMIdParameterSet)]
         [Parameter(ParameterSetName = GetPSSessionCommand.VMNameParameterSet)]
-        [ValidateNotNullOrEmpty()]
+        [ValidateNotNullOrEmpty]
         public override string[] Name
         {
             get { return base.Name; }
@@ -199,10 +203,13 @@ namespace Microsoft.PowerShell.Commands
         [Parameter(ParameterSetName = GetPSSessionCommand.ComputerInstanceIdParameterSet)]
         [Parameter(ParameterSetName = GetPSSessionCommand.ConnectionUriParameterSet)]
         [Parameter(ParameterSetName = GetPSSessionCommand.ConnectionUriInstanceIdParameterSet)]
-        [Credential()]
+        [Credential]
         public PSCredential Credential
         {
-            get { return _psCredential; }
+            get
+            {
+                return _psCredential;
+            }
 
             set
             {
@@ -223,7 +230,10 @@ namespace Microsoft.PowerShell.Commands
         [Parameter(ParameterSetName = GetPSSessionCommand.ConnectionUriInstanceIdParameterSet)]
         public AuthenticationMechanism Authentication
         {
-            get { return _authentication; }
+            get
+            {
+                return _authentication;
+            }
 
             set
             {
@@ -245,7 +255,10 @@ namespace Microsoft.PowerShell.Commands
         [Parameter(ParameterSetName = GetPSSessionCommand.ConnectionUriInstanceIdParameterSet)]
         public string CertificateThumbprint
         {
-            get { return _thumbprint; }
+            get
+            {
+                return _thumbprint;
+            }
 
             set
             {
@@ -270,7 +283,7 @@ namespace Microsoft.PowerShell.Commands
         /// </remarks>
         [Parameter(ParameterSetName = GetPSSessionCommand.ComputerNameParameterSet)]
         [Parameter(ParameterSetName = GetPSSessionCommand.ComputerInstanceIdParameterSet)]
-        [ValidateRange((int)1, (int)UInt16.MaxValue)]
+        [ValidateRange((int)1, (int)ushort.MaxValue)]
         public int Port { get; set; }
 
         /// <summary>
@@ -329,12 +342,23 @@ namespace Microsoft.PowerShell.Commands
         /// </summary>
         protected override void BeginProcessing()
         {
-            base.BeginProcessing();
-
-            if (ConfigurationName == null)
+#if UNIX
+            if (ComputerName?.Length > 0)
             {
-                ConfigurationName = string.Empty;
+                ErrorRecord err = new(
+                    new NotImplementedException(
+                        PSRemotingErrorInvariants.FormatResourceString(
+                            RemotingErrorIdStrings.UnsupportedOSForRemoteEnumeration,
+                            RuntimeInformation.OSDescription)),
+                    "PSSessionComputerNameUnix",
+                    ErrorCategory.NotImplemented,
+                    null);
+                ThrowTerminatingError(err);
             }
+#endif
+
+            base.BeginProcessing();
+            ConfigurationName ??= string.Empty;
         }
 
         /// <summary>

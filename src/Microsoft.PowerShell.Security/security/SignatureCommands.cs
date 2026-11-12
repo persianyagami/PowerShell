@@ -44,7 +44,7 @@ namespace Microsoft.PowerShell.Commands
         /// digital signature.
         /// </summary>
         [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, ParameterSetName = "ByLiteralPath")]
-        [Alias("PSPath")]
+        [Alias("PSPath", "LP")]
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
         public string[] LiteralPath
         {
@@ -104,7 +104,10 @@ namespace Microsoft.PowerShell.Commands
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
         public byte[] Content
         {
-            get { return _content; }
+            get
+            {
+                return _content;
+            }
 
             set
             {
@@ -155,7 +158,7 @@ namespace Microsoft.PowerShell.Commands
 
                 foreach (string p in FilePath)
                 {
-                    Collection<string> paths = new Collection<string>();
+                    Collection<string> paths = new();
 
                     // Expand wildcard characters
                     if (_isLiteralPath)
@@ -291,7 +294,7 @@ namespace Microsoft.PowerShell.Commands
         /// </returns>
         protected override Signature PerformAction(string sourcePathOrExtension, byte[] content)
         {
-            return SignatureHelper.GetSignature(sourcePathOrExtension, System.Text.Encoding.Unicode.GetString(content));
+            return SignatureHelper.GetSignature(sourcePathOrExtension, content);
         }
     }
 
@@ -371,10 +374,7 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                if (value == null)
-                {
-                    value = string.Empty;
-                }
+                value ??= string.Empty;
 
                 _timestampServer = value;
             }
@@ -401,12 +401,12 @@ namespace Microsoft.PowerShell.Commands
             }
         }
 
-        private string _hashAlgorithm = null;
+        private string _hashAlgorithm = "SHA256";
 
         /// <summary>
         /// Property that sets force parameter.
         /// </summary>
-        [Parameter()]
+        [Parameter]
         public SwitchParameter Force
         {
             get
@@ -464,7 +464,7 @@ namespace Microsoft.PowerShell.Commands
                     try
                     {
                         // remove readonly attributes on the file
-                        FileInfo fInfo = new FileInfo(filePath);
+                        FileInfo fInfo = new(filePath);
                         if (fInfo != null)
                         {
                             // Save some disk write time by checking whether file is readonly..
@@ -480,56 +480,51 @@ namespace Microsoft.PowerShell.Commands
                     // These are the known exceptions for File.Load and StreamWriter.ctor
                     catch (ArgumentException e)
                     {
-                        ErrorRecord er = new ErrorRecord(
+                        ErrorRecord er = new(
                             e,
                             "ForceArgumentException",
                             ErrorCategory.WriteError,
-                            filePath
-                            );
+                            filePath);
                         WriteError(er);
                         return null;
                     }
                     catch (IOException e)
                     {
-                        ErrorRecord er = new ErrorRecord(
+                        ErrorRecord er = new(
                             e,
                             "ForceIOException",
                             ErrorCategory.WriteError,
-                            filePath
-                            );
+                            filePath);
                         WriteError(er);
                         return null;
                     }
                     catch (UnauthorizedAccessException e)
                     {
-                        ErrorRecord er = new ErrorRecord(
+                        ErrorRecord er = new(
                             e,
                             "ForceUnauthorizedAccessException",
                             ErrorCategory.PermissionDenied,
-                            filePath
-                            );
+                            filePath);
                         WriteError(er);
                         return null;
                     }
                     catch (NotSupportedException e)
                     {
-                        ErrorRecord er = new ErrorRecord(
+                        ErrorRecord er = new(
                             e,
                             "ForceNotSupportedException",
                             ErrorCategory.WriteError,
-                            filePath
-                            );
+                            filePath);
                         WriteError(er);
                         return null;
                     }
                     catch (System.Security.SecurityException e)
                     {
-                        ErrorRecord er = new ErrorRecord(
+                        ErrorRecord er = new(
                             e,
                             "ForceSecurityException",
                             ErrorCategory.PermissionDenied,
-                            filePath
-                            );
+                            filePath);
                         WriteError(er);
                         return null;
                     }
@@ -548,7 +543,7 @@ namespace Microsoft.PowerShell.Commands
                         System.Globalization.CultureInfo.CurrentCulture,
                         UtilsStrings.FileSmallerThan4Bytes, filePath);
 
-                    PSArgumentException e = new PSArgumentException(message, nameof(filePath));
+                    PSArgumentException e = new(message, nameof(filePath));
                     ErrorRecord er = SecurityUtils.CreateInvalidArgumentErrorRecord(
                             e,
                             "SignatureCommandsBaseFileSmallerThan4Bytes"

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Internal;
 using System.Management.Automation.Runspaces;
+using Microsoft.PowerShell.Commands;
 
 namespace Microsoft.PowerShell.Commands.Internal.Format
 {
@@ -576,7 +577,10 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
                 return false;
             }
 
-            set { showErrorsAsMessages = value; }
+            set
+            {
+                showErrorsAsMessages = value;
+            }
         }
 
         internal bool? showErrorsAsMessages = null;
@@ -595,7 +599,10 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
                 return false;
             }
 
-            set { showErrorsInFormattedOutput = value; }
+            set
+            {
+                showErrorsInFormattedOutput = value;
+            }
         }
 
         internal bool? showErrorsInFormattedOutput = null;
@@ -721,7 +728,14 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
         /// will be determined using property sets, etc.
         /// </summary>
         [Parameter(Position = 0)]
+        [ValidateNotNullOrEmpty]
         public object[] Property { get; set; }
+
+        /// <summary>
+        /// Optional parameter for excluding properties from formatting.
+        /// </summary>
+        [Parameter]
+        public string[] ExcludeProperty { get; set; }
 
         #endregion
 
@@ -745,6 +759,18 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
 
         internal void GetCommandLineProperties(FormattingCommandLineParameters parameters, bool isTable)
         {
+            // Check View conflicts first (before any auto-expansion)
+            if (!string.IsNullOrEmpty(this.View))
+            {
+                // View cannot be used with Property or ExcludeProperty
+                if ((Property is not null && Property.Length != 0) || (ExcludeProperty is not null && ExcludeProperty.Length != 0))
+                {
+                    ReportCannotSpecifyViewAndProperty();
+                }
+
+                parameters.viewName = this.View;
+            }
+
             if (Property != null)
             {
                 CommandParameterDefinition def;
@@ -759,15 +785,21 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
                 parameters.mshParameterList = processor.ProcessParameters(Property, invocationContext);
             }
 
-            if (!string.IsNullOrEmpty(this.View))
+            if (ExcludeProperty is not null)
             {
-                // we have a view command line switch
-                if (parameters.mshParameterList.Count != 0)
-                {
-                    ReportCannotSpecifyViewAndProperty();
-                }
+                parameters.excludePropertyFilter = new PSPropertyExpressionFilter(ExcludeProperty);
 
-                parameters.viewName = this.View;
+                // ExcludeProperty implies -Property * for better UX
+                if (Property is null || Property.Length == 0)
+                {
+                    CommandParameterDefinition def = isTable
+                        ? new FormatTableParameterDefinition()
+                        : new FormatListParameterDefinition();
+                    ParameterProcessor processor = new ParameterProcessor(def);
+                    TerminatingErrorContext invocationContext = new TerminatingErrorContext(this);
+
+                    parameters.mshParameterList = processor.ProcessParameters(new object[] { "*" }, invocationContext);
+                }
             }
         }
     }
@@ -792,7 +824,10 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
                 return false;
             }
 
-            set { _autosize = value; }
+            set
+            {
+                _autosize = value;
+            }
         }
 
         private bool? _autosize = null;
@@ -817,7 +852,10 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
                 return false;
             }
 
-            set { _hideHeaders = value; }
+            set
+            {
+                _hideHeaders = value;
+            }
         }
 
         private bool? _hideHeaders = null;
@@ -836,7 +874,10 @@ namespace Microsoft.PowerShell.Commands.Internal.Format
                 return false;
             }
 
-            set { _multiLine = value; }
+            set
+            {
+                _multiLine = value;
+            }
         }
 
         private bool? _multiLine = null;

@@ -44,6 +44,12 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         #region parameters
 
         /// <summary>
+        /// Gets or sets flag to retrieve a localized data for WMI class.
+        /// </summary>
+        [Parameter]
+        public SwitchParameter Amended { get; set; }
+
+        /// <summary>
         /// <para>
         /// The following is the definition of the input parameter "ClassName".
         /// </para>
@@ -79,7 +85,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         /// </summary>
         [Alias(AliasOT)]
         [Parameter(ValueFromPipelineByPropertyName = true)]
-        public UInt32 OperationTimeoutSec { get; set; }
+        public uint OperationTimeoutSec { get; set; }
 
         /// <summary>
         /// The following is the definition of the input parameter "Session".
@@ -92,7 +98,10 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
         public CimSession[] CimSession
         {
-            get { return cimSession; }
+            get
+            {
+                return cimSession;
+            }
 
             set
             {
@@ -118,7 +127,10 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
         public string[] ComputerName
         {
-            get { return computerName; }
+            get
+            {
+                return computerName;
+            }
 
             set
             {
@@ -190,10 +202,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         protected override void EndProcessing()
         {
             CimGetCimClass cimGetCimClass = this.GetOperationAgent();
-            if (cimGetCimClass != null)
-            {
-                cimGetCimClass.ProcessRemainActions(this.CmdletOperation);
-            }
+            cimGetCimClass?.ProcessRemainActions(this.CmdletOperation);
         }
 
         #endregion
@@ -208,7 +217,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         /// </summary>
         private CimGetCimClass GetOperationAgent()
         {
-            return (this.AsyncOperation as CimGetCimClass);
+            return this.AsyncOperation as CimGetCimClass;
         }
 
         /// <summary>

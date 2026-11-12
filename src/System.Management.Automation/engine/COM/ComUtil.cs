@@ -16,7 +16,7 @@ namespace System.Management.Automation
     /// <summary>
     /// Defines a utility class that is used by COM adapter.
     /// </summary>
-    internal class ComUtil
+    internal static class ComUtil
     {
         // HResult error code '-2147352573' - Member not found.
         internal const int DISP_E_MEMBERNOTFOUND = unchecked((int)0x80020003);
@@ -141,9 +141,6 @@ namespace System.Management.Automation
             return "UnknownCustomtype";
         }
 
-        // Disable obsolete warning about VarEnum in CoreCLR
-#pragma warning disable 618
-
         /// <summary>
         /// This function gets a string representation of the Type Descriptor
         /// This is used in generating signature for Properties and Methods.
@@ -258,8 +255,6 @@ namespace System.Management.Automation
             VarEnum vt = (VarEnum)typedesc.vt;
             return VarEnumSelector.GetTypeForVarEnum(vt);
         }
-
-#pragma warning restore 618
 
         /// <summary>
         /// Converts a FuncDesc out of GetFuncDesc into a MethodInformation.

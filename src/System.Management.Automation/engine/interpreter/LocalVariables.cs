@@ -35,7 +35,10 @@ namespace System.Management.Automation.Interpreter
 
         public bool IsBoxed
         {
-            get { return (_flags & IsBoxedFlag) != 0; }
+            get
+            {
+                return (_flags & IsBoxedFlag) != 0;
+            }
 
             set
             {
@@ -160,10 +163,7 @@ namespace System.Management.Automation.Interpreter
             if (_variables.TryGetValue(variable, out existing))
             {
                 newScope = new VariableScope(result, start, existing);
-                if (existing.ChildScopes == null)
-                {
-                    existing.ChildScopes = new List<VariableScope>();
-                }
+                existing.ChildScopes ??= new List<VariableScope>();
 
                 existing.ChildScopes.Add(newScope);
             }
@@ -293,10 +293,7 @@ namespace System.Management.Automation.Interpreter
 
         internal LocalVariable AddClosureVariable(ParameterExpression variable)
         {
-            if (_closureVariables == null)
-            {
-                _closureVariables = new Dictionary<ParameterExpression, LocalVariable>();
-            }
+            _closureVariables ??= new Dictionary<ParameterExpression, LocalVariable>();
 
             LocalVariable result = new LocalVariable(_closureVariables.Count, true, false);
             _closureVariables.Add(variable, result);

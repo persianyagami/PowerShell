@@ -194,11 +194,7 @@ namespace Microsoft.PowerShell.Commands
                 if (dynamicParametersSpecified)
                 {
                     item = (AliasInfo)GetSessionStateItem(name);
-
-                    if (item != null)
-                    {
-                        item.SetOptions(dynamicParameters.Options, Force);
-                    }
+                    item?.SetOptions(dynamicParameters.Options, Force);
                 }
                 else
                 {
@@ -331,7 +327,10 @@ namespace Microsoft.PowerShell.Commands
         [Parameter]
         public ScopedItemOptions Options
         {
-            get { return _options; }
+            get
+            {
+                return _options;
+            }
 
             set
             {

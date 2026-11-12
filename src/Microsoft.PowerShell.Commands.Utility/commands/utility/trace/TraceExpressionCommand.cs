@@ -46,7 +46,10 @@ namespace Microsoft.PowerShell.Commands
         [Parameter(Position = 2)]
         public PSTraceSourceOptions Option
         {
-            get { return base.OptionsInternal; }
+            get
+            {
+                return base.OptionsInternal;
+            }
 
             set
             {
@@ -82,7 +85,10 @@ namespace Microsoft.PowerShell.Commands
         [Parameter]
         public TraceOptions ListenerOption
         {
-            get { return base.ListenerOptionsInternal; }
+            get
+            {
+                return base.ListenerOptionsInternal;
+            }
 
             set
             {
@@ -243,13 +249,7 @@ namespace Microsoft.PowerShell.Commands
         /// <summary>
         /// Ensures that the sub-pipeline we created gets stopped as well.
         /// </summary>
-        protected override void StopProcessing()
-        {
-            if (_pipeline != null)
-            {
-                _pipeline.Stop();
-            }
-        }
+        protected override void StopProcessing() => _pipeline?.Stop();
 
         #endregion Cmdlet code
 
@@ -323,22 +323,15 @@ namespace Microsoft.PowerShell.Commands
     /// cmdlet.  It gets attached to the sub-pipelines success or error pipeline and redirects
     /// all objects written to these pipelines to trace-command pipeline.
     /// </summary>
-    internal class TracePipelineWriter : PipelineWriter
+    internal sealed class TracePipelineWriter : PipelineWriter
     {
         internal TracePipelineWriter(
             TraceListenerCommandBase cmdlet,
             bool writeError,
             Collection<PSTraceSource> matchingSources)
         {
-            if (cmdlet == null)
-            {
-                throw new ArgumentNullException(nameof(cmdlet));
-            }
-
-            if (matchingSources == null)
-            {
-                throw new ArgumentNullException(nameof(matchingSources));
-            }
+            ArgumentNullException.ThrowIfNull(cmdlet);
+            ArgumentNullException.ThrowIfNull(matchingSources);
 
             _cmdlet = cmdlet;
             _writeError = writeError;
@@ -519,8 +512,7 @@ namespace Microsoft.PowerShell.Commands
         private static ErrorRecord ConvertToErrorRecord(object obj)
         {
             ErrorRecord result = null;
-            PSObject mshobj = obj as PSObject;
-            if (mshobj != null)
+            if (obj is PSObject mshobj)
             {
                 object baseObject = mshobj.BaseObject;
                 if (baseObject is not PSCustomObject)
@@ -529,8 +521,7 @@ namespace Microsoft.PowerShell.Commands
                 }
             }
 
-            ErrorRecord errorRecordResult = obj as ErrorRecord;
-            if (errorRecordResult != null)
+            if (obj is ErrorRecord errorRecordResult)
             {
                 result = errorRecordResult;
             }

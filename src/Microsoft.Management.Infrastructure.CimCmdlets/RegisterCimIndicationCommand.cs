@@ -50,7 +50,10 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
             ParameterSetName = CimBaseCommand.ClassNameComputerSet)]
         public string ClassName
         {
-            get { return className; }
+            get
+            {
+                return className;
+            }
 
             set
             {
@@ -75,7 +78,10 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
             ParameterSetName = CimBaseCommand.QueryExpressionComputerSet)]
         public string Query
         {
-            get { return query; }
+            get
+            {
+                return query;
+            }
 
             set
             {
@@ -97,7 +103,10 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         [Parameter(ParameterSetName = CimBaseCommand.QueryExpressionSessionSet)]
         public string QueryDialect
         {
-            get { return queryDialect; }
+            get
+            {
+                return queryDialect;
+            }
 
             set
             {
@@ -115,7 +124,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         /// </summary>
         [Alias(CimBaseCommand.AliasOT)]
         [Parameter]
-        public UInt32 OperationTimeoutSec { get; set; }
+        public uint OperationTimeoutSec { get; set; }
 
         /// <summary>
         /// The following is the definition of the input parameter "Session".
@@ -129,7 +138,10 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
             ParameterSetName = CimBaseCommand.ClassNameSessionSet)]
         public CimSession CimSession
         {
-            get { return cimSession; }
+            get
+            {
+                return cimSession;
+            }
 
             set
             {
@@ -150,7 +162,10 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         [Parameter(ParameterSetName = CimBaseCommand.ClassNameComputerSet)]
         public string ComputerName
         {
-            get { return computername; }
+            get
+            {
+                return computername;
+            }
 
             set
             {
@@ -190,7 +205,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
                 case CimBaseCommand.ClassNameComputerSet:
                     // validate the classname
                     this.CheckArgument();
-                    tempQueryExpression = string.Format(CultureInfo.CurrentCulture, "Select * from {0}", this.ClassName);
+                    tempQueryExpression = string.Create(CultureInfo.CurrentCulture, $"Select * from {this.ClassName}");
                     break;
             }
 
@@ -212,10 +227,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
                     break;
             }
 
-            if (watcher != null)
-            {
-                watcher.SetCmdlet(this);
-            }
+            watcher?.SetCmdlet(this);
 
             return watcher;
         }
@@ -260,10 +272,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
             DebugHelper.WriteLogEx();
 
             CimIndicationWatcher watcher = sender as CimIndicationWatcher;
-            if (watcher != null)
-            {
-                watcher.Stop();
-            }
+            watcher?.Stop();
         }
 
         #region private members

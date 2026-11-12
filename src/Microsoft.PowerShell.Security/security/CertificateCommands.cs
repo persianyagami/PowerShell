@@ -44,7 +44,7 @@ namespace Microsoft.PowerShell.Commands
         /// certificate.
         /// </summary>
         [Parameter(ValueFromPipelineByPropertyName = true, Mandatory = true, ParameterSetName = "ByLiteralPath")]
-        [Alias("PSPath")]
+        [Alias("PSPath", "LP")]
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
         public string[] LiteralPath
         {
@@ -77,7 +77,7 @@ namespace Microsoft.PowerShell.Commands
         //
         // list of files that were not found
         //
-        private readonly List<string> _filesNotFound = new List<string>();
+        private readonly List<string> _filesNotFound = new();
 
         /// <summary>
         /// Initializes a new instance of the GetPfxCertificateCommand
@@ -105,7 +105,7 @@ namespace Microsoft.PowerShell.Commands
 
             foreach (string p in FilePath)
             {
-                List<string> paths = new List<string>();
+                List<string> paths = new();
 
                 // Expand wildcard characters
                 if (_isLiteralPath)
@@ -160,11 +160,11 @@ namespace Microsoft.PowerShell.Commands
                         }
                         catch (CryptographicException e)
                         {
-                            ErrorRecord er =
-                                new ErrorRecord(e,
-                                                "GetPfxCertificateUnknownCryptoError",
-                                                ErrorCategory.NotSpecified,
-                                                null);
+                            ErrorRecord er = new(
+                                e,
+                                "GetPfxCertificateUnknownCryptoError",
+                                ErrorCategory.NotSpecified,
+                                targetObject: null);
                             WriteError(er);
                             continue;
                         }
@@ -208,8 +208,11 @@ namespace Microsoft.PowerShell.Commands
 
         private static X509Certificate2 GetCertFromPfxFile(string path, SecureString password)
         {
+            // No overload found in X509CertificateLoader that takes SecureString
+            #pragma warning disable SYSLIB0057
             var cert = new X509Certificate2(path, password, X509KeyStorageFlags.DefaultKeySet);
             return cert;
+            #pragma warning restore SYSLIB0057
         }
     }
 }

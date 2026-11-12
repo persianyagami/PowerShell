@@ -6,17 +6,19 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Management.Automation;
 using System.Management.Automation.Internal;
 using System.Management.Automation.Language;
 using System.Management.Automation.PSTasks;
+using System.Management.Automation.Security;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+
 using CommonParamSet = System.Management.Automation.Internal.CommonParameters;
 using Dbg = System.Management.Automation.Diagnostics;
+using NotNullWhen = System.Diagnostics.CodeAnalysis.NotNullWhenAttribute;
 
 namespace Microsoft.PowerShell.Commands
 {
@@ -384,10 +386,11 @@ namespace Microsoft.PowerShell.Commands
         private void InitParallelParameterSet()
         {
             // The following common parameters are not (yet) supported in this parameter set.
-            //  ErrorAction, WarningAction, InformationAction, PipelineVariable.
+            //  ErrorAction, WarningAction, InformationAction, ProgressAction, PipelineVariable.
             if (MyInvocation.BoundParameters.ContainsKey(nameof(CommonParamSet.ErrorAction)) ||
                 MyInvocation.BoundParameters.ContainsKey(nameof(CommonParamSet.WarningAction)) ||
                 MyInvocation.BoundParameters.ContainsKey(nameof(CommonParamSet.InformationAction)) ||
+                MyInvocation.BoundParameters.ContainsKey(nameof(CommonParamSet.ProgressAction)) ||
                 MyInvocation.BoundParameters.ContainsKey(nameof(CommonParamSet.PipelineVariable)))
             {
                 ThrowTerminatingError(
@@ -407,19 +410,18 @@ namespace Microsoft.PowerShell.Commands
             {
             }
 
-            bool allowUsingExpression = this.Context.SessionState.LanguageMode != PSLanguageMode.NoLanguage;
-            _usingValuesMap = ScriptBlockToPowerShellConverter.GetUsingValuesAsDictionary(
-                                Parallel,
-                                allowUsingExpression,
-                                this.Context,
-                                null);
+            var allowUsingExpression = this.Context.SessionState.LanguageMode != PSLanguageMode.NoLanguage;
+            _usingValuesMap = ScriptBlockToPowerShellConverter.GetUsingValuesForEachParallel(
+                scriptBlock: Parallel,
+                isTrustedInput: allowUsingExpression,
+                context: this.Context);
 
             // Validate using values map, which is a map of '$using:' variables referenced in the script.
             // Script block variables are not allowed since their behavior is undefined outside the runspace
             // in which they were created.
             foreach (object item in _usingValuesMap.Values)
             {
-                if (item is ScriptBlock)
+                if (item is ScriptBlock or PSObject { BaseObject: ScriptBlock })
                 {
                     ThrowTerminatingError(
                         new ErrorRecord(
@@ -684,7 +686,10 @@ namespace Microsoft.PowerShell.Commands
             else
             {
                 // if inputObject is of IDictionary, get the value
-                if (GetValueFromIDictionaryInput()) { return; }
+                if (GetValueFromIDictionaryInput())
+                {
+                    return;
+                }
 
                 PSMemberInfo member = null;
                 if (WildcardPattern.ContainsWildcardCharacters(_propertyOrMethodName))
@@ -700,7 +705,7 @@ namespace Microsoft.PowerShell.Commands
                         StringBuilder possibleMatches = new StringBuilder();
                         foreach (PSMemberInfo item in members)
                         {
-                            possibleMatches.AppendFormat(CultureInfo.InvariantCulture, " {0}", item.Name);
+                            possibleMatches.Append(CultureInfo.InvariantCulture, $" {item.Name}");
                         }
 
                         WriteError(GenerateNameParameterError("Name", InternalCommandStrings.AmbiguousPropertyOrMethodName,
@@ -919,17 +924,14 @@ namespace Microsoft.PowerShell.Commands
                 // because it allows you to parameterize a command - for example you might allow
                 // for actions before and after the main processing script. They could be null
                 // by default and therefore ignored then filled in later...
-                if (_scripts[i] != null)
-                {
-                    _scripts[i].InvokeUsingCmdlet(
-                        contextCmdlet: this,
-                        useLocalScope: false,
-                        errorHandlingBehavior: ScriptBlock.ErrorHandlingBehavior.WriteToCurrentErrorPipe,
-                        dollarUnder: InputObject,
-                        input: new object[] { InputObject },
-                        scriptThis: AutomationNull.Value,
-                        args: Array.Empty<object>());
-                }
+                _scripts[i]?.InvokeUsingCmdlet(
+                    contextCmdlet: this,
+                    useLocalScope: false,
+                    errorHandlingBehavior: ScriptBlock.ErrorHandlingBehavior.WriteToCurrentErrorPipe,
+                    dollarUnder: InputObject,
+                    input: new object[] { InputObject },
+                    scriptThis: AutomationNull.Value,
+                    args: Array.Empty<object>());
             }
         }
 
@@ -1021,7 +1023,7 @@ namespace Microsoft.PowerShell.Commands
                 StringBuilder possibleMatches = new StringBuilder();
                 foreach (PSMemberInfo item in methods)
                 {
-                    possibleMatches.AppendFormat(CultureInfo.InvariantCulture, " {0}", item.Name);
+                    possibleMatches.Append(CultureInfo.InvariantCulture, $" {item.Name}");
                 }
 
                 WriteError(GenerateNameParameterError(
@@ -1051,7 +1053,7 @@ namespace Microsoft.PowerShell.Commands
                 StringBuilder arglist = new StringBuilder(GetStringRepresentation(_arguments[0]));
                 for (int i = 1; i < _arguments.Length; i++)
                 {
-                    arglist.AppendFormat(CultureInfo.InvariantCulture, ", {0}", GetStringRepresentation(_arguments[i]));
+                    arglist.Append(CultureInfo.InvariantCulture, $", {GetStringRepresentation(_arguments[i])}");
                 }
 
                 string methodAction = string.Format(CultureInfo.InvariantCulture,
@@ -1204,14 +1206,25 @@ namespace Microsoft.PowerShell.Commands
             if (Context.LanguageMode == PSLanguageMode.ConstrainedLanguage)
             {
                 object baseObject = PSObject.Base(inputObject);
+                var objectType = baseObject.GetType();
 
-                if (!CoreTypes.Contains(baseObject.GetType()))
+                if (!CoreTypes.Contains(objectType))
                 {
-                    PSInvalidOperationException exception =
-                        new PSInvalidOperationException(ParserStrings.InvokeMethodConstrainedLanguage);
+                    if (SystemPolicy.GetSystemLockdownPolicy() != SystemEnforcementMode.Audit)
+                    {
+                        PSInvalidOperationException exception =
+                            new PSInvalidOperationException(ParserStrings.InvokeMethodConstrainedLanguage);
 
-                    WriteError(new ErrorRecord(exception, "MethodInvocationNotSupportedInConstrainedLanguage", ErrorCategory.InvalidOperation, null));
-                    return true;
+                        WriteError(new ErrorRecord(exception, "MethodInvocationNotSupportedInConstrainedLanguage", ErrorCategory.InvalidOperation, null));
+                        return true;
+                    }
+
+                    SystemPolicy.LogWDACAuditMessage(
+                        context: Context,
+                        title: InternalCommandStrings.WDACLogTitle,
+                        message: StringUtil.Format(InternalCommandStrings.WDACLogMessage, objectType.FullName),
+                        fqid: "ForEachObjectCmdletMethodInvocationNotAllowed",
+                        dropIntoDebugger: true);
                 }
             }
 
@@ -1428,8 +1441,11 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Ieq;
-                _forceBooleanEvaluation = false;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Ieq;
+                    _forceBooleanEvaluation = false;
+                }
             }
         }
 
@@ -1446,7 +1462,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Ceq;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Ceq;
+                }
             }
         }
 
@@ -1464,7 +1483,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Ine;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Ine;
+                }
             }
         }
 
@@ -1481,7 +1503,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Cne;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Cne;
+                }
             }
         }
 
@@ -1499,7 +1524,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Igt;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Igt;
+                }
             }
         }
 
@@ -1516,7 +1544,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Cgt;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Cgt;
+                }
             }
         }
 
@@ -1534,12 +1565,15 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Ilt;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Ilt;
+                }
             }
         }
 
         /// <summary>
-        /// Gets -sets case sensitive binary operator -clt.
+        /// Gets or sets case sensitive binary operator -clt.
         /// </summary>
         [Parameter(Mandatory = true, ParameterSetName = "CaseSensitiveLessThanSet")]
         public SwitchParameter CLT
@@ -1551,7 +1585,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Clt;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Clt;
+                }
             }
         }
 
@@ -1569,7 +1606,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Ige;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Ige;
+                }
             }
         }
 
@@ -1586,7 +1626,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Cge;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Cge;
+                }
             }
         }
 
@@ -1604,7 +1647,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Ile;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Ile;
+                }
             }
         }
 
@@ -1621,7 +1667,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Cle;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Cle;
+                }
             }
         }
 
@@ -1639,7 +1688,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Ilike;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Ilike;
+                }
             }
         }
 
@@ -1656,7 +1708,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Clike;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Clike;
+                }
             }
         }
 
@@ -1674,7 +1729,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Inotlike;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Inotlike;
+                }
             }
         }
 
@@ -1691,7 +1749,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Cnotlike;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Cnotlike;
+                }
             }
         }
 
@@ -1709,7 +1770,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Imatch;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Imatch;
+                }
             }
         }
 
@@ -1726,7 +1790,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Cmatch;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Cmatch;
+                }
             }
         }
 
@@ -1744,7 +1811,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Inotmatch;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Inotmatch;
+                }
             }
         }
 
@@ -1761,7 +1831,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Cnotmatch;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Cnotmatch;
+                }
             }
         }
 
@@ -1779,7 +1852,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Icontains;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Icontains;
+                }
             }
         }
 
@@ -1796,7 +1872,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Ccontains;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Ccontains;
+                }
             }
         }
 
@@ -1814,7 +1893,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Inotcontains;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Inotcontains;
+                }
             }
         }
 
@@ -1831,7 +1913,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Cnotcontains;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Cnotcontains;
+                }
             }
         }
 
@@ -1849,7 +1934,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.In;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.In;
+                }
             }
         }
 
@@ -1866,7 +1954,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Cin;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Cin;
+                }
             }
         }
 
@@ -1884,7 +1975,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Inotin;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Inotin;
+                }
             }
         }
 
@@ -1901,7 +1995,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Cnotin;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Cnotin;
+                }
             }
         }
 
@@ -1918,7 +2015,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Is;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Is;
+                }
             }
         }
 
@@ -1935,7 +2035,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.IsNot;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.IsNot;
+                }
             }
         }
 
@@ -1952,7 +2055,10 @@ namespace Microsoft.PowerShell.Commands
 
             set
             {
-                _binaryOperator = TokenKind.Not;
+                if (value)
+                {
+                    _binaryOperator = TokenKind.Not;
+                }
             }
         }
 
@@ -2005,7 +2111,7 @@ namespace Microsoft.PowerShell.Commands
 
         private object GetLikeRHSOperand(object operand)
         {
-            if (!(operand is string val))
+            if (operand is not string val)
             {
                 return operand;
             }
@@ -2357,7 +2463,7 @@ namespace Microsoft.PowerShell.Commands
                 StringBuilder possibleMatches = new StringBuilder();
                 foreach (PSMemberInfo item in members)
                 {
-                    possibleMatches.AppendFormat(CultureInfo.InvariantCulture, " {0}", item.Name);
+                    possibleMatches.Append(CultureInfo.InvariantCulture, $" {item.Name}");
                 }
 
                 WriteError(
@@ -2636,46 +2742,19 @@ namespace Microsoft.PowerShell.Commands
         private SwitchParameter _off;
 
         /// <summary>
-        /// To make it easier to specify a version, we add some conversions that wouldn't happen otherwise:
-        ///   * A simple integer, i.e. 2
-        ///   * A string without a dot, i.e. "2"
-        ///   * The string 'latest', which we interpret to be the current version of PowerShell.
+        /// Handle 'latest', which we interpret to be the current version of PowerShell.
         /// </summary>
-        private sealed class ArgumentToVersionTransformationAttribute : ArgumentTransformationAttribute
+        private sealed class ArgumentToPSVersionTransformationAttribute : ArgumentToVersionTransformationAttribute
         {
-            public override object Transform(EngineIntrinsics engineIntrinsics, object inputData)
+            protected override bool TryConvertFromString(string versionString, [NotNullWhen(true)] out Version version)
             {
-                object version = PSObject.Base(inputData);
-
-                string versionStr = version as string;
-                if (versionStr != null)
+                if (string.Equals("latest", versionString, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (versionStr.Equals("latest", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return PSVersionInfo.PSVersion;
-                    }
-
-                    if (versionStr.Contains("."))
-                    {
-                        // If the string contains a '.', let the Version constructor handle the conversion.
-                        return inputData;
-                    }
+                    version = PSVersionInfo.PSVersion;
+                    return true;
                 }
 
-                if (version is double)
-                {
-                    // The conversion to int below is wrong, but the usual conversions will turn
-                    // the double into a string, so just return the original object.
-                    return inputData;
-                }
-
-                int majorVersion;
-                if (LanguagePrimitives.TryConvertTo<int>(version, out majorVersion))
-                {
-                    return new Version(majorVersion, 0);
-                }
-
-                return inputData;
+                return base.TryConvertFromString(versionString, out version);
             }
         }
 
@@ -2684,7 +2763,7 @@ namespace Microsoft.PowerShell.Commands
             protected override void Validate(object arguments, EngineIntrinsics engineIntrinsics)
             {
                 Version version = arguments as Version;
-                if (version == null || !PSVersionInfo.IsValidPSVersion(version))
+                if (!PSVersionInfo.IsValidPSVersion(version))
                 {
                     // No conversion succeeded so throw and exception...
                     throw new ValidationMetadataException(
@@ -2700,7 +2779,8 @@ namespace Microsoft.PowerShell.Commands
         /// Gets or sets strict mode in the current scope.
         /// </summary>
         [Parameter(ParameterSetName = "Version", Mandatory = true)]
-        [ArgumentToVersionTransformation]
+        [ArgumentCompleter(typeof(StrictModeVersionArgumentCompleter))]
+        [ArgumentToPSVersionTransformation]
         [ValidateVersion]
         [Alias("v")]
         public Version Version
@@ -2731,6 +2811,34 @@ namespace Microsoft.PowerShell.Commands
             Context.EngineSessionState.CurrentScope.StrictModeVersion = _version;
         }
     }
+
+    /// <summary>
+    /// Provides argument completion for StrictMode Version parameter.
+    /// </summary>
+    public class StrictModeVersionArgumentCompleter : IArgumentCompleter
+    {
+        private static readonly string[] s_strictModeVersions = new string[] { "Latest", "3.0", "2.0", "1.0" };
+
+        /// <summary>
+        /// Returns completion results for version parameter.
+        /// </summary>
+        /// <param name="commandName">The command name.</param>
+        /// <param name="parameterName">The parameter name.</param>
+        /// <param name="wordToComplete">The word to complete.</param>
+        /// <param name="commandAst">The command AST.</param>
+        /// <param name="fakeBoundParameters">The fake bound parameters.</param>
+        /// <returns>List of Completion Results.</returns>
+        public IEnumerable<CompletionResult> CompleteArgument(
+            string commandName,
+            string parameterName,
+            string wordToComplete,
+            CommandAst commandAst,
+            IDictionary fakeBoundParameters)
+                => CompletionHelpers.GetMatchingResults(
+                    wordToComplete,
+                    possibleCompletionValues: s_strictModeVersions);
+    }
+
     #endregion Set-StrictMode
 
     #endregion Built-in cmdlets that are used by or require direct access to the engine.

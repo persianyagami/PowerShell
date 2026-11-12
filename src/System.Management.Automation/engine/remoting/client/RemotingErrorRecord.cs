@@ -11,7 +11,6 @@ namespace System.Management.Automation.Runspaces
     /// <summary>
     /// Error record in remoting cases.
     /// </summary>
-    [Serializable]
     public class RemotingErrorRecord : ErrorRecord
     {
         /// <summary>
@@ -32,7 +31,8 @@ namespace System.Management.Automation.Runspaces
         /// </summary>
         /// <param name="errorRecord">The error record that is wrapped.</param>
         /// <param name="originInfo">Origin information.</param>
-        public RemotingErrorRecord(ErrorRecord errorRecord, OriginInfo originInfo) : this(errorRecord, originInfo, null) { }
+        public RemotingErrorRecord(ErrorRecord errorRecord, OriginInfo originInfo)
+            : this(errorRecord, originInfo, null) { }
 
         /// <summary>
         /// Constructor that is used to wrap an error record.
@@ -40,8 +40,11 @@ namespace System.Management.Automation.Runspaces
         /// <param name="errorRecord"></param>
         /// <param name="originInfo"></param>
         /// <param name="replaceParentContainsErrorRecordException"></param>
-        private RemotingErrorRecord(ErrorRecord errorRecord, OriginInfo originInfo, Exception replaceParentContainsErrorRecordException) :
-            base(errorRecord, replaceParentContainsErrorRecordException)
+        private RemotingErrorRecord(
+            ErrorRecord errorRecord,
+            OriginInfo originInfo,
+            Exception replaceParentContainsErrorRecordException)
+            : base(errorRecord, replaceParentContainsErrorRecordException)
         {
             if (errorRecord != null)
             {
@@ -54,31 +57,14 @@ namespace System.Management.Automation.Runspaces
         #region ISerializable implementation
 
         /// <summary>
-        /// Serializer method for class.
-        /// </summary>
-        /// <param name="info">Serializer information.</param>
-        /// <param name="context">Streaming context.</param>
-        public override void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            if (info == null)
-            {
-                throw PSTraceSource.NewArgumentNullException(nameof(info));
-            }
-
-            base.GetObjectData(info, context);
-
-            info.AddValue("RemoteErrorRecord_OriginInfo", _originInfo);
-        }
-
-        /// <summary>
         /// Deserializer constructor.
         /// </summary>
         /// <param name="info">Serializer information.</param>
         /// <param name="context">Streaming context.</param>
-        protected RemotingErrorRecord(SerializationInfo info, StreamingContext context)
-            : base(info, context)
+        [Obsolete("Legacy serialization support is deprecated since .NET 8", DiagnosticId = "SYSLIB0051")]
+        protected RemotingErrorRecord(SerializationInfo info, StreamingContext context) : base(info, context)
         {
-            _originInfo = (OriginInfo)info.GetValue("RemoteErrorRecord_OriginInfo", typeof(OriginInfo));
+            throw new NotSupportedException();
         }
 
         #endregion
@@ -104,7 +90,7 @@ namespace System.Management.Automation.Runspaces
     /// <summary>
     /// Progress record containing origin information.
     /// </summary>
-    [DataContract()]
+    [DataContract]
     public class RemotingProgressRecord : ProgressRecord
     {
         /// <summary>
@@ -115,7 +101,7 @@ namespace System.Management.Automation.Runspaces
             get { return _originInfo; }
         }
 
-        [DataMemberAttribute()]
+        [DataMember]
         private readonly OriginInfo _originInfo;
 
         /// <summary>
@@ -123,8 +109,11 @@ namespace System.Management.Automation.Runspaces
         /// </summary>
         /// <param name="progressRecord">The progress record that is wrapped.</param>
         /// <param name="originInfo">Origin information.</param>
-        public RemotingProgressRecord(ProgressRecord progressRecord, OriginInfo originInfo) :
-            base(Validate(progressRecord).ActivityId, Validate(progressRecord).Activity, Validate(progressRecord).StatusDescription)
+        public RemotingProgressRecord(ProgressRecord progressRecord, OriginInfo originInfo)
+            : base(
+                  Validate(progressRecord).ActivityId,
+                  Validate(progressRecord).Activity,
+                  Validate(progressRecord).StatusDescription)
         {
             _originInfo = originInfo;
             if (progressRecord != null)
@@ -142,7 +131,7 @@ namespace System.Management.Automation.Runspaces
 
         private static ProgressRecord Validate(ProgressRecord progressRecord)
         {
-            if (progressRecord == null) throw new ArgumentNullException(nameof(progressRecord));
+            ArgumentNullException.ThrowIfNull(progressRecord);
             return progressRecord;
         }
     }
@@ -150,7 +139,7 @@ namespace System.Management.Automation.Runspaces
     /// <summary>
     /// Warning record containing origin information.
     /// </summary>
-    [DataContract()]
+    [DataContract]
     public class RemotingWarningRecord : WarningRecord
     {
         /// <summary>
@@ -161,7 +150,7 @@ namespace System.Management.Automation.Runspaces
             get { return _originInfo; }
         }
 
-        [DataMemberAttribute()]
+        [DataMember]
         private readonly OriginInfo _originInfo;
 
         /// <summary>
@@ -169,7 +158,8 @@ namespace System.Management.Automation.Runspaces
         /// </summary>
         /// <param name="message">The warning message that is wrapped.</param>
         /// <param name="originInfo">The origin information.</param>
-        public RemotingWarningRecord(string message, OriginInfo originInfo) : base(message)
+        public RemotingWarningRecord(string message, OriginInfo originInfo)
+            : base(message)
         {
             _originInfo = originInfo;
         }
@@ -191,7 +181,7 @@ namespace System.Management.Automation.Runspaces
     /// <summary>
     /// Debug record containing origin information.
     /// </summary>
-    [DataContract()]
+    [DataContract]
     public class RemotingDebugRecord : DebugRecord
     {
         /// <summary>
@@ -202,7 +192,7 @@ namespace System.Management.Automation.Runspaces
             get { return _originInfo; }
         }
 
-        [DataMemberAttribute()]
+        [DataMember]
         private readonly OriginInfo _originInfo;
 
         /// <summary>
@@ -210,7 +200,8 @@ namespace System.Management.Automation.Runspaces
         /// </summary>
         /// <param name="message">The debug message that is wrapped.</param>
         /// <param name="originInfo">The origin information.</param>
-        public RemotingDebugRecord(string message, OriginInfo originInfo) : base(message)
+        public RemotingDebugRecord(string message, OriginInfo originInfo)
+            : base(message)
         {
             _originInfo = originInfo;
         }
@@ -219,7 +210,7 @@ namespace System.Management.Automation.Runspaces
     /// <summary>
     /// Verbose record containing origin information.
     /// </summary>
-    [DataContract()]
+    [DataContract]
     public class RemotingVerboseRecord : VerboseRecord
     {
         /// <summary>
@@ -230,7 +221,7 @@ namespace System.Management.Automation.Runspaces
             get { return _originInfo; }
         }
 
-        [DataMemberAttribute()]
+        [DataMember]
         private readonly OriginInfo _originInfo;
 
         /// <summary>
@@ -238,7 +229,8 @@ namespace System.Management.Automation.Runspaces
         /// </summary>
         /// <param name="message">The verbose message that is wrapped.</param>
         /// <param name="originInfo">The origin information.</param>
-        public RemotingVerboseRecord(string message, OriginInfo originInfo) : base(message)
+        public RemotingVerboseRecord(string message, OriginInfo originInfo)
+            : base(message)
         {
             _originInfo = originInfo;
         }
@@ -247,7 +239,7 @@ namespace System.Management.Automation.Runspaces
     /// <summary>
     /// Information record containing origin information.
     /// </summary>
-    [DataContract()]
+    [DataContract]
     public class RemotingInformationRecord : InformationRecord
     {
         /// <summary>
@@ -258,7 +250,7 @@ namespace System.Management.Automation.Runspaces
             get { return _originInfo; }
         }
 
-        [DataMemberAttribute()]
+        [DataMember]
         private readonly OriginInfo _originInfo;
 
         /// <summary>
@@ -284,8 +276,7 @@ namespace System.Management.Automation.Remoting
     /// In case of output objects, the information
     /// should directly be added to the object as
     /// properties</remarks>
-    [Serializable]
-    [DataContract()]
+    [DataContract]
     public class OriginInfo
     {
         /// <summary>
@@ -301,7 +292,7 @@ namespace System.Management.Automation.Remoting
             }
         }
 
-        [DataMemberAttribute()]
+        [DataMember]
         private readonly string _computerName;
 
         /// <summary>
@@ -316,7 +307,7 @@ namespace System.Management.Automation.Remoting
             }
         }
 
-        [DataMemberAttribute()]
+        [DataMember]
         private readonly Guid _runspaceID;
 
         /// <summary>
@@ -336,7 +327,7 @@ namespace System.Management.Automation.Remoting
             }
         }
 
-        [DataMemberAttribute()]
+        [DataMember]
         private Guid _instanceId;
 
         /// <summary>

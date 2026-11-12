@@ -29,6 +29,7 @@ namespace Microsoft.WSMan.Management
     /// -SelectorSet {Name=Spooler}
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "WSManInstance", DefaultParameterSetName = "GetInstance", HelpUri = "https://go.microsoft.com/fwlink/?LinkId=2096627")]
+    [OutputType(typeof(XmlElement))]
     public class GetWSManInstanceCommand : AuthenticatingWSManCommand, IDisposable
     {
         #region parameter
@@ -40,7 +41,10 @@ namespace Microsoft.WSMan.Management
         [Parameter(ParameterSetName = "Enumerate")]
         public string ApplicationName
         {
-            get { return applicationname; }
+            get
+            {
+                return applicationname;
+            }
 
             set
             {
@@ -60,7 +64,10 @@ namespace Microsoft.WSMan.Management
         [Alias("UBPO", "Base")]
         public SwitchParameter BasePropertiesOnly
         {
-            get { return basepropertiesonly; }
+            get
+            {
+                return basepropertiesonly;
+            }
 
             set
             {
@@ -81,7 +88,10 @@ namespace Microsoft.WSMan.Management
         [Alias("CN")]
         public string ComputerName
         {
-            get { return computername; }
+            get
+            {
+                return computername;
+            }
 
             set
             {
@@ -109,7 +119,10 @@ namespace Microsoft.WSMan.Management
         [SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly", MessageId = "URI")]
         public Uri ConnectionURI
         {
-            get { return connectionuri; }
+            get
+            {
+                return connectionuri;
+            }
 
             set
             {
@@ -126,7 +139,10 @@ namespace Microsoft.WSMan.Management
         [Parameter]
         public Uri Dialect
         {
-            get { return dialect; }
+            get
+            {
+                return dialect;
+            }
 
             set
             {
@@ -145,7 +161,10 @@ namespace Microsoft.WSMan.Management
                   ParameterSetName = "Enumerate")]
         public SwitchParameter Enumerate
         {
-            get { return enumerate; }
+            get
+            {
+                return enumerate;
+            }
 
             set
             {
@@ -163,7 +182,10 @@ namespace Microsoft.WSMan.Management
         [ValidateNotNullOrEmpty]
         public string Filter
         {
-            get { return filter; }
+            get
+            {
+                return filter;
+            }
 
             set
             {
@@ -182,7 +204,10 @@ namespace Microsoft.WSMan.Management
         [ValidateNotNullOrEmpty]
         public string Fragment
         {
-            get { return fragment; }
+            get
+            {
+                return fragment;
+            }
 
             set
             {
@@ -204,7 +229,10 @@ namespace Microsoft.WSMan.Management
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public Hashtable OptionSet
         {
-            get { return optionset; }
+            get
+            {
+                return optionset;
+            }
 
             set
             {
@@ -220,9 +248,12 @@ namespace Microsoft.WSMan.Management
         /// </summary>
         [Parameter(ParameterSetName = "Enumerate")]
         [Parameter(ParameterSetName = "GetInstance")]
-        public Int32 Port
+        public int Port
         {
-            get { return port; }
+            get
+            {
+                return port;
+            }
 
             set
             {
@@ -230,7 +261,7 @@ namespace Microsoft.WSMan.Management
             }
         }
 
-        private Int32 port = 0;
+        private int port = 0;
 
         /// <summary>
         /// The following is the definition of the input parameter "Associations".
@@ -241,7 +272,10 @@ namespace Microsoft.WSMan.Management
         [Parameter(ParameterSetName = "Enumerate")]
         public SwitchParameter Associations
         {
-            get { return associations; }
+            get
+            {
+                return associations;
+            }
 
             set
             {
@@ -264,7 +298,10 @@ namespace Microsoft.WSMan.Management
         [Alias("RURI")]
         public Uri ResourceURI
         {
-            get { return resourceuri; }
+            get
+            {
+                return resourceuri;
+            }
 
             set
             {
@@ -289,11 +326,14 @@ namespace Microsoft.WSMan.Management
         [Parameter(ParameterSetName = "Enumerate")]
 
         [ValidateNotNullOrEmpty]
-        [ValidateSetAttribute(new string[] { "object", "epr", "objectandepr" })]
+        [ValidateSet(new string[] { "object", "epr", "objectandepr" })]
         [Alias("RT")]
         public string ReturnType
         {
-            get { return returntype; }
+            get
+            {
+                return returntype;
+            }
 
             set
             {
@@ -315,7 +355,10 @@ namespace Microsoft.WSMan.Management
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public Hashtable SelectorSet
         {
-            get { return selectorset; }
+            get
+            {
+                return selectorset;
+            }
 
             set
             {
@@ -336,7 +379,10 @@ namespace Microsoft.WSMan.Management
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public SessionOption SessionOption
         {
-            get { return sessionoption; }
+            get
+            {
+                return sessionoption;
+            }
 
             set
             {
@@ -356,7 +402,10 @@ namespace Microsoft.WSMan.Management
 
         public SwitchParameter Shallow
         {
-            get { return shallow; }
+            get
+            {
+                return shallow;
+            }
 
             set
             {
@@ -379,7 +428,10 @@ namespace Microsoft.WSMan.Management
         [Alias("SSL")]
         public SwitchParameter UseSSL
         {
-            get { return usessl; }
+            get
+            {
+                return usessl;
+            }
 
             set
             {
@@ -634,6 +686,7 @@ namespace Microsoft.WSMan.Management
     /// -SelectorSet {Name=Spooler}
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "WSManInstance", DefaultParameterSetName = "ComputerName", HelpUri = "https://go.microsoft.com/fwlink/?LinkId=2096937")]
+    [OutputType(typeof(XmlElement), typeof(string))]
     public class SetWSManInstanceCommand : AuthenticatingWSManCommand, IDisposable
     {
         #region Parameters
@@ -662,7 +715,10 @@ namespace Microsoft.WSMan.Management
         [Alias("cn")]
         public string ComputerName
         {
-            get { return computername; }
+            get
+            {
+                return computername;
+            }
 
             set
             {
@@ -768,15 +824,15 @@ namespace Microsoft.WSMan.Management
         /// </summary>
         [Parameter(ParameterSetName = "ComputerName")]
         [ValidateNotNullOrEmpty]
-        [ValidateRange(1, Int32.MaxValue)]
-        public Int32 Port
+        [ValidateRange(1, int.MaxValue)]
+        public int Port
         {
             get { return port; }
 
             set { port = value; }
         }
 
-        private Int32 port = 0;
+        private int port = 0;
 
         /// <summary>
         /// The following is the definition of the input parameter "ResourceURI".
@@ -1032,7 +1088,10 @@ namespace Microsoft.WSMan.Management
         [Alias("cn")]
         public string ComputerName
         {
-            get { return computername; }
+            get
+            {
+                return computername;
+            }
 
             set
             {
@@ -1089,15 +1148,15 @@ namespace Microsoft.WSMan.Management
         /// </summary>
         [Parameter(ParameterSetName = "ComputerName")]
         [ValidateNotNullOrEmpty]
-        [ValidateRange(1, Int32.MaxValue)]
-        public Int32 Port
+        [ValidateRange(1, int.MaxValue)]
+        public int Port
         {
             get { return port; }
 
             set { port = value; }
         }
 
-        private Int32 port = 0;
+        private int port = 0;
 
         /// <summary>
         /// The following is the definition of the input parameter "ResourceURI".
@@ -1267,6 +1326,7 @@ namespace Microsoft.WSMan.Management
     /// using specified ValueSet or input File.
     /// </summary>
     [Cmdlet(VerbsCommon.New, "WSManInstance", DefaultParameterSetName = "ComputerName", HelpUri = "https://go.microsoft.com/fwlink/?LinkId=2096933")]
+    [OutputType(typeof(XmlElement))]
     public class NewWSManInstanceCommand : AuthenticatingWSManCommand, IDisposable
     {
         /// <summary>
@@ -1294,7 +1354,10 @@ namespace Microsoft.WSMan.Management
         [Alias("cn")]
         public string ComputerName
         {
-            get { return computername; }
+            get
+            {
+                return computername;
+            }
 
             set
             {
@@ -1368,15 +1431,15 @@ namespace Microsoft.WSMan.Management
         /// </summary>
         [Parameter(ParameterSetName = "ComputerName")]
         [ValidateNotNullOrEmpty]
-        [ValidateRange(1, Int32.MaxValue)]
-        public Int32 Port
+        [ValidateRange(1, int.MaxValue)]
+        public int Port
         {
             get { return port; }
 
             set { port = value; }
         }
 
-        private Int32 port = 0;
+        private int port = 0;
 
         /// <summary>
         /// The following is the definition of the input parameter "ResourceURI".

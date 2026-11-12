@@ -34,7 +34,10 @@ namespace Microsoft.PowerShell.Commands
         [Alias("PSPath", "LP")]
         public string[] LiteralPath
         {
-            get { return Path; }
+            get
+            {
+                return Path;
+            }
 
             set
             {
@@ -241,7 +244,7 @@ namespace Microsoft.PowerShell.Commands
         /// as they get written to the pipeline. An instance of this cache class is
         /// only valid for a single path.
         /// </summary>
-        internal class ContentPathsCache
+        internal sealed class ContentPathsCache
         {
             /// <summary>
             /// Constructs a content cache item.
@@ -374,10 +377,7 @@ namespace Microsoft.PowerShell.Commands
             {
                 try
                 {
-                    if (holder.Writer != null)
-                    {
-                        holder.Writer.Close();
-                    }
+                    holder.Writer?.Close();
                 }
                 catch (Exception e) // Catch-all OK. 3rd party callout
                 {
@@ -411,10 +411,7 @@ namespace Microsoft.PowerShell.Commands
 
                 try
                 {
-                    if (holder.Reader != null)
-                    {
-                        holder.Reader.Close();
-                    }
+                    holder.Reader?.Close();
                 }
                 catch (Exception e) // Catch-all OK. 3rd party callout
                 {

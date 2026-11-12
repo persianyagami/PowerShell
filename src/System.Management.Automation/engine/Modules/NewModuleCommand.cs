@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Management.Automation;
+using System.Management.Automation.Security;
 
 //
 // Now define the set of commands for manipulating modules.
@@ -42,7 +43,10 @@ namespace Microsoft.PowerShell.Commands
         [ValidateNotNull]
         public ScriptBlock ScriptBlock
         {
-            get { return _scriptBlock; }
+            get
+            {
+                return _scriptBlock;
+            }
 
             set
             {
@@ -60,7 +64,10 @@ namespace Microsoft.PowerShell.Commands
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays", Justification = "Cmdlets use arrays for parameters.")]
         public string[] Function
         {
-            get { return _functionImportList; }
+            get
+            {
+                return _functionImportList;
+            }
 
             set
             {
@@ -88,7 +95,10 @@ namespace Microsoft.PowerShell.Commands
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays", Justification = "Cmdlets use arrays for parameters.")]
         public string[] Cmdlet
         {
-            get { return _cmdletImportList; }
+            get
+            {
+                return _cmdletImportList;
+            }
 
             set
             {
@@ -159,15 +169,24 @@ namespace Microsoft.PowerShell.Commands
             {
                 // Check ScriptBlock language mode.  If it is different than the context language mode
                 // then throw error since private trusted script functions may be exposed.
-                if (Context.LanguageMode == PSLanguageMode.ConstrainedLanguage &&
-                    _scriptBlock.LanguageMode == PSLanguageMode.FullLanguage)
+                if (Context.LanguageMode == PSLanguageMode.ConstrainedLanguage && _scriptBlock.LanguageMode == PSLanguageMode.FullLanguage)
                 {
-                    this.ThrowTerminatingError(
-                        new ErrorRecord(
-                            new PSSecurityException(Modules.CannotCreateModuleWithScriptBlock),
-                            "Modules_CannotCreateModuleWithFullLanguageScriptBlock",
-                            ErrorCategory.SecurityError,
-                            null));
+                    if (SystemPolicy.GetSystemLockdownPolicy() != SystemEnforcementMode.Audit)
+                    {
+                        this.ThrowTerminatingError(
+                            new ErrorRecord(
+                                new PSSecurityException(Modules.CannotCreateModuleWithScriptBlock),
+                                "Modules_CannotCreateModuleWithFullLanguageScriptBlock",
+                                ErrorCategory.SecurityError,
+                                targetObject: null));
+                    }
+
+                    SystemPolicy.LogWDACAuditMessage(
+                        context: Context,
+                        title: Modules.WDACNewModuleCommandLogTitle,
+                        message: Modules.WDACNewModuleCommandLogMessage,
+                        fqid: "NewModuleCmdletWitFullLanguageScriptblockNotAllowed",
+                        dropIntoDebugger: true);
                 }
 
                 string gs = System.Guid.NewGuid().ToString();

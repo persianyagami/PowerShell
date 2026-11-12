@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Management.Automation.Host;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Security;
 
@@ -24,7 +25,7 @@ namespace System.Management.Automation.Remoting
     /// guarantees that transmitting on the wire will not change the encoded
     /// object's type.
     /// </summary>
-    internal class RemoteHostEncoder
+    internal static class RemoteHostEncoder
     {
         /// <summary>
         /// Is known type.
@@ -87,7 +88,7 @@ namespace System.Management.Automation.Remoting
         /// </summary>
         private static object DecodeClassOrStruct(PSObject psObject, Type type)
         {
-            object obj = FormatterServices.GetUninitializedObject(type);
+            object obj = RuntimeHelpers.GetUninitializedObject(type);
 
             // Field values cannot be null - because for null fields we simply don't transport them.
             foreach (PSPropertyInfo propertyInfo in psObject.Properties)

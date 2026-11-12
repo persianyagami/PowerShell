@@ -83,7 +83,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
                 GetComputerName(cmdlet));
             string nameSpace;
             List<CimSessionProxy> proxys = new();
-            bool isGetCimInstanceCommand = (cmdlet is GetCimInstanceCommand);
+            bool isGetCimInstanceCommand = cmdlet is GetCimInstanceCommand;
             CimInstance targetCimInstance = null;
             switch (cmdlet.ParameterSetName)
             {
@@ -284,8 +284,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         internal static bool IsClassNameQuerySet(CimBaseCommand cmdlet)
         {
             DebugHelper.WriteLogEx();
-            GetCimInstanceCommand cmd = cmdlet as GetCimInstanceCommand;
-            if (cmd != null)
+            if (cmdlet is GetCimInstanceCommand cmd)
             {
                 if (cmd.QueryDialect != null || cmd.SelectProperties != null || cmd.Filter != null)
                 {
@@ -299,8 +298,7 @@ namespace Microsoft.Management.Infrastructure.CimCmdlets
         protected static string CreateQuery(CimBaseCommand cmdlet)
         {
             DebugHelper.WriteLogEx();
-            GetCimInstanceCommand cmd = cmdlet as GetCimInstanceCommand;
-            if (cmd != null)
+            if (cmdlet is GetCimInstanceCommand cmd)
             {
                 StringBuilder propertyList = new();
                 if (cmd.SelectProperties == null)

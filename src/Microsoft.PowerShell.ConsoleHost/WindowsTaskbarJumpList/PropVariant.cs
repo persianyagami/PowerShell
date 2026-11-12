@@ -34,9 +34,7 @@ namespace Microsoft.PowerShell
                 throw new ArgumentException("PropVariantNullString", nameof(value));
             }
 
-#pragma warning disable CS0618 // Type or member is obsolete (might get deprecated in future versions
             _valueType = (ushort)VarEnum.VT_LPWSTR;
-#pragma warning restore CS0618 // Type or member is obsolete (might get deprecated in future versions
             _ptr = Marshal.StringToCoTaskMemUni(value);
         }
 
@@ -58,7 +56,7 @@ namespace Microsoft.PowerShell
             Dispose();
         }
 
-        private class PropVariantNativeMethods
+        private static class PropVariantNativeMethods
         {
             [DllImport("Ole32.dll", PreserveSig = false)]
             internal static extern void PropVariantClear([In, Out] PropVariant pvar);

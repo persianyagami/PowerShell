@@ -34,7 +34,7 @@ namespace System.Management.Automation
         private readonly ConnectCommandInfo _connectCmdInfo = null;
 
         /// <summary>
-        /// This is queue of all the state change event which have occured for
+        /// This is queue of all the state change event which have occurred for
         /// this pipeline. RaisePipelineStateEvents raises event for each
         /// item in this queue. We don't raise the event with in SetPipelineState
         /// because often SetPipelineState is called with in a lock.
@@ -42,7 +42,7 @@ namespace System.Management.Automation
         /// </summary>
         private Queue<ExecutionEventQueueItem> _executionEventQueue = new Queue<ExecutionEventQueueItem>();
 
-        private class ExecutionEventQueueItem
+        private sealed class ExecutionEventQueueItem
         {
             public ExecutionEventQueueItem(PipelineStateInfo pipelineStateInfo, RunspaceAvailability currentAvailability, RunspaceAvailability newAvailability)
             {
@@ -95,7 +95,7 @@ namespace System.Management.Automation
             SetCommandCollection(_commands);
 
             // Create event which will be signalled when pipeline execution
-            // is completed/failed/stoped.
+            // is completed/failed/stopped.
             // Note:Runspace.Close waits for all the running pipeline
             // to finish.  This Event must be created before pipeline is
             // added to list of running pipelines. This avoids the race condition
@@ -161,8 +161,12 @@ namespace System.Management.Automation
         /// <param name="pipeline">Pipeline to clone from.</param>
         /// <remarks>This constructor is private because this will
         /// only be called from the copy method</remarks>
-        private RemotePipeline(RemotePipeline pipeline) :
-            this((RemoteRunspace)pipeline.Runspace, null, false, pipeline.IsNested)
+        private RemotePipeline(RemotePipeline pipeline)
+            : this(
+                (RemoteRunspace)pipeline.Runspace,
+                command: null,
+                addToHistory: false,
+                pipeline.IsNested)
         {
             _isSteppable = pipeline._isSteppable;
 
@@ -595,7 +599,7 @@ namespace System.Management.Automation
                         break;
 
                     // If pipeline execution has failed or completed or
-                    // stoped, return silently.
+                    // stopped, return silently.
                     case PipelineState.Stopped:
                     case PipelineState.Completed:
                     case PipelineState.Failed:
@@ -1014,7 +1018,7 @@ namespace System.Management.Automation
 
         /// <summary>
         /// ManualResetEvent which is signaled when pipeline execution is
-        /// completed/failed/stoped.
+        /// completed/failed/stopped.
         /// </summary>
         internal ManualResetEvent PipelineFinishedEvent { get; }
 

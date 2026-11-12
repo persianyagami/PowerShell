@@ -515,10 +515,7 @@ namespace System.Management.Automation.Provider
                 return string.Empty;
             }
 
-            if (basePath == null)
-            {
-                basePath = string.Empty;
-            }
+            basePath ??= string.Empty;
 
             providerBaseTracer.WriteLine("basePath = {0}", basePath);
 
@@ -1036,8 +1033,7 @@ namespace System.Management.Automation.Provider
                         if (!allowNonExistingPaths)
                         {
                             PSArgumentException e =
-                                (PSArgumentException)
-                                PSTraceSource.NewArgumentException(
+                                (PSArgumentException)PSTraceSource.NewArgumentException(
                                     nameof(path),
                                     SessionStateStrings.NormalizeRelativePathOutsideBase,
                                     path,

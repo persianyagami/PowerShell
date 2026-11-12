@@ -26,7 +26,7 @@ namespace Microsoft.PowerShell.Commands
         /// <summary>
         /// An instance of the PSTraceSource class used for trace output.
         /// </summary>
-        [Dbg.TraceSourceAttribute(
+        [Dbg.TraceSource(
              "SessionStateProvider",
              "Providers that produce a view of session state data.")]
         private static readonly Dbg.PSTraceSource s_tracer =
@@ -708,8 +708,7 @@ namespace Microsoft.PowerShell.Commands
             if (ItemExists(path) && !Force)
             {
                 PSArgumentException e =
-                    (PSArgumentException)
-                    PSTraceSource.NewArgumentException(
+                    (PSArgumentException)PSTraceSource.NewArgumentException(
                         nameof(path),
                         SessionStateStrings.NewItemAlreadyExists,
                         path);
@@ -838,8 +837,7 @@ namespace Microsoft.PowerShell.Commands
             else
             {
                 PSArgumentException e =
-                    (PSArgumentException)
-                    PSTraceSource.NewArgumentException(
+                    (PSArgumentException)PSTraceSource.NewArgumentException(
                         nameof(path),
                         SessionStateStrings.CopyItemDoesntExist,
                         path);
@@ -897,8 +895,7 @@ namespace Microsoft.PowerShell.Commands
                 if (ItemExists(newName) && !Force)
                 {
                     PSArgumentException e =
-                        (PSArgumentException)
-                        PSTraceSource.NewArgumentException(
+                        (PSArgumentException)PSTraceSource.NewArgumentException(
                             nameof(newName),
                             SessionStateStrings.NewItemAlreadyExists,
                             newName);
@@ -984,8 +981,7 @@ namespace Microsoft.PowerShell.Commands
             else
             {
                 PSArgumentException e =
-                    (PSArgumentException)
-                    PSTraceSource.NewArgumentException(
+                    (PSArgumentException)PSTraceSource.NewArgumentException(
                         nameof(name),
                         SessionStateStrings.RenameItemDoesntExist,
                         name);

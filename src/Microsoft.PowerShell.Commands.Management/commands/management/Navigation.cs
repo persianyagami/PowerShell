@@ -25,7 +25,7 @@ namespace Microsoft.PowerShell.Commands
         /// An instance of the PSTraceSource class used for trace output
         /// using "NavigationCommands" as the category.
         /// </summary>
-        [Dbg.TraceSourceAttribute("NavigationCommands", "The namespace navigation tracer")]
+        [Dbg.TraceSource("NavigationCommands", "The namespace navigation tracer")]
         internal static readonly Dbg.PSTraceSource tracer = Dbg.PSTraceSource.GetTracer("NavigationCommands", "The namespace navigation tracer");
 
         #endregion Tracer
@@ -107,7 +107,7 @@ namespace Microsoft.PowerShell.Commands
             // may be getting piped in.
             bool result = true;
 
-            if (paths != null && paths.Length >= 0)
+            if (paths != null)
             {
                 foreach (string path in paths)
                 {
@@ -283,7 +283,7 @@ namespace Microsoft.PowerShell.Commands
         /// Gets or sets the credential parameter.
         /// </summary>
         [Parameter(ValueFromPipelineByPropertyName = true)]
-        [Credential()]
+        [Credential]
         public PSCredential Credential { get; set; }
 
         #endregion Parameters
@@ -618,7 +618,7 @@ namespace Microsoft.PowerShell.Commands
                     break;
 
                 default:
-                    Dbg.Diagnostics.Assert(false, string.Format(System.Globalization.CultureInfo.InvariantCulture, "One of the predefined parameter sets should have been specified, instead we got: {0}", ParameterSetName));
+                    Dbg.Diagnostics.Assert(false, string.Create(System.Globalization.CultureInfo.InvariantCulture, $"One of the predefined parameter sets should have been specified, instead we got: {ParameterSetName}"));
                     break;
             }
         }
@@ -1075,7 +1075,7 @@ namespace Microsoft.PowerShell.Commands
     #region NewPSDriveCommand
 
     /// <summary>
-    /// Mounts a drive in the Monad namespace.
+    /// Mounts a drive in PowerShell runspace.
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PSDrive", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.Low,
         SupportsTransactions = true, HelpUri = "https://go.microsoft.com/fwlink/?LinkID=2096815")]
@@ -1129,6 +1129,7 @@ namespace Microsoft.PowerShell.Commands
         /// Gets or sets the scope identifier for the drive being created.
         /// </summary>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+        [ArgumentCompleter(typeof(ScopeArgumentCompleter))]
         public string Scope { get; set; }
 
 #if !UNIX
@@ -1477,7 +1478,7 @@ namespace Microsoft.PowerShell.Commands
     #region RemovePSDriveCommand
 
     /// <summary>
-    /// Removes a drive that is mounted in the Monad namespace.
+    /// Removes a drive that is mounted in the PowerShell runspace.
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PSDrive", DefaultParameterSetName = NameParameterSet, SupportsShouldProcess = true, SupportsTransactions = true,
         HelpUri = "https://go.microsoft.com/fwlink/?LinkID=2097050")]
@@ -1533,6 +1534,7 @@ namespace Microsoft.PowerShell.Commands
         /// global scope until a drive of the given name is found to remove.
         /// </summary>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+        [ArgumentCompleter(typeof(ScopeArgumentCompleter))]
         public string Scope { get; set; }
 
         /// <summary>
@@ -1609,8 +1611,7 @@ namespace Microsoft.PowerShell.Commands
                             if (!Force && drive == SessionState.Drive.Current)
                             {
                                 PSInvalidOperationException invalidOperation =
-                                    (PSInvalidOperationException)
-                                    PSTraceSource.NewInvalidOperationException(
+                                    (PSInvalidOperationException)PSTraceSource.NewInvalidOperationException(
                                         NavigationResources.RemoveDriveInUse,
                                         drive.Name);
 
@@ -1654,7 +1655,7 @@ namespace Microsoft.PowerShell.Commands
     #region GetPSDriveCommand
 
     /// <summary>
-    /// Gets a specified or listing of drives that are mounted in the Monad
+    /// Gets a specified or listing of drives that are mounted in PowerShell
     /// namespace.
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PSDrive", DefaultParameterSetName = NameParameterSet, SupportsTransactions = true, HelpUri = "https://go.microsoft.com/fwlink/?LinkID=2096494")]
@@ -1702,6 +1703,7 @@ namespace Microsoft.PowerShell.Commands
         /// Gets or sets the scope parameter to the command.
         /// </summary>
         [Parameter(ValueFromPipelineByPropertyName = true)]
+        [ArgumentCompleter(typeof(ScopeArgumentCompleter))]
         public string Scope { get; set; }
 
         /// <summary>
@@ -2637,8 +2639,7 @@ namespace Microsoft.PowerShell.Commands
                     if (isCurrentLocationOrAncestor)
                     {
                         PSInvalidOperationException invalidOperation =
-                            (PSInvalidOperationException)
-                            PSTraceSource.NewInvalidOperationException(
+                            (PSInvalidOperationException)PSTraceSource.NewInvalidOperationException(
                                 NavigationResources.RemoveItemInUse,
                                 resolvedPath.Path);
 
@@ -2701,7 +2702,7 @@ namespace Microsoft.PowerShell.Commands
                         try
                         {
                             System.IO.DirectoryInfo di = new(providerPath);
-                            if (di != null && (di.Attributes & System.IO.FileAttributes.ReparsePoint) != 0)
+                            if (InternalSymbolicLinkLinkCodeMethods.IsReparsePointLikeSymlink(di))
                             {
                                 shouldRecurse = false;
                                 treatAsFile = true;
@@ -2717,7 +2718,7 @@ namespace Microsoft.PowerShell.Commands
                     {
                         // Get the localized prompt string
 
-                        string prompt = StringUtil.Format(NavigationResources.RemoveItemWithChildren, resolvedPath.Path);
+                        string prompt = StringUtil.Format(NavigationResources.RemoveItemWithChildren, providerPath);
 
                         // Confirm the user wants to remove all children and the item even if
                         // they did not specify -recurse
@@ -3012,8 +3013,7 @@ namespace Microsoft.PowerShell.Commands
                 if (!InvokeProvider.Item.Exists(path, currentContext))
                 {
                     PSInvalidOperationException invalidOperation =
-                        (PSInvalidOperationException)
-                        PSTraceSource.NewInvalidOperationException(
+                        (PSInvalidOperationException)PSTraceSource.NewInvalidOperationException(
                             NavigationResources.MoveItemDoesntExist,
                             path);
 
@@ -3099,8 +3099,7 @@ namespace Microsoft.PowerShell.Commands
             if (isCurrentLocationOrAncestor)
             {
                 PSInvalidOperationException invalidOperation =
-                    (PSInvalidOperationException)
-                    PSTraceSource.NewInvalidOperationException(
+                    (PSInvalidOperationException)PSTraceSource.NewInvalidOperationException(
                         NavigationResources.MoveItemInUse,
                         path);
 
@@ -3354,8 +3353,7 @@ namespace Microsoft.PowerShell.Commands
                 if (!InvokeProvider.Item.Exists(path, currentContext))
                 {
                     PSInvalidOperationException invalidOperation =
-                        (PSInvalidOperationException)
-                        PSTraceSource.NewInvalidOperationException(
+                        (PSInvalidOperationException)PSTraceSource.NewInvalidOperationException(
                             NavigationResources.RenameItemDoesntExist,
                             path);
 
@@ -3441,8 +3439,7 @@ namespace Microsoft.PowerShell.Commands
             if (isCurrentLocationOrAncestor)
             {
                 PSInvalidOperationException invalidOperation =
-                    (PSInvalidOperationException)
-                    PSTraceSource.NewInvalidOperationException(
+                    (PSInvalidOperationException)PSTraceSource.NewInvalidOperationException(
                         NavigationResources.RenamedItemInUse,
                         path);
 
@@ -4134,7 +4131,7 @@ namespace Microsoft.PowerShell.Commands
         /// Gets or sets the provider that will be removed.
         /// </summary>
         [Parameter(Position = 0, ValueFromPipelineByPropertyName = true)]
-        [ValidateNotNullOrEmpty()]
+        [ValidateNotNullOrEmpty]
         public string[] PSProvider
         {
             get => _provider;

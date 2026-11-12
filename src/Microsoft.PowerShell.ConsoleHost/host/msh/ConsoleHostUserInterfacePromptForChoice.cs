@@ -252,7 +252,7 @@ namespace Microsoft.PowerShell
                         // choices to be picked.
 
                         // user did not pick up any choices..choose the default
-                        if ((result.Count == 0) && (defaultChoiceKeys.Keys.Count >= 0))
+                        if (result.Count == 0)
                         {
                             // if there's a default, pick that one.
                             foreach (int defaultChoice in defaultChoiceKeys.Keys)
@@ -345,8 +345,7 @@ namespace Microsoft.PowerShell
                         defaultStr = hotkeysAndPlainLabels[1, defaultChoice];
                     }
 
-                    defaultChoicesBuilder.Append(string.Format(CultureInfo.InvariantCulture,
-                        "{0}{1}", prepend, defaultStr));
+                    defaultChoicesBuilder.Append(CultureInfo.InvariantCulture, $"{prepend}{defaultStr}");
                     prepend = ",";
                 }
 
@@ -427,7 +426,7 @@ namespace Microsoft.PowerShell
 
                 WriteLineToConsole(
                     WrapToCurrentWindowWidth(
-                        string.Format(CultureInfo.InvariantCulture, "{0} - {1}", s, choices[i].HelpMessage)));
+                        string.Create(CultureInfo.InvariantCulture, $"{s} - {choices[i].HelpMessage}")));
             }
         }
 

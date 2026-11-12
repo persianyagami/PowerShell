@@ -1,8 +1,15 @@
 {
   "sdk": {
-    "channel": "release/5.0.1xx",
-    "packageVersionPattern": "5.0.0",
-    "sdkImageVersion": "5.0.100",
-    "nextChannel": "net5/rc2"
+    "channel": "9.0.1xx-preview6",
+    "quality": "daily",
+    "qualityFallback": "preview",
+    "packageVersionPattern": "9.0.0-preview.6",
+    "sdkImageVersion": "11.0.100",
+    "nextChannel": "9.0.0-preview.7",
+    "azureFeed": "",
+    "sdkImageOverride": ""
+  },
+  "internalfeed": {
+    "url": ""
   }
 }

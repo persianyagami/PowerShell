@@ -31,7 +31,10 @@ namespace Microsoft.PowerShell.Commands
         [Parameter]
         public AccessRightTypeNames Type
         {
-            get { return _type; }
+            get
+            {
+                return _type;
+            }
 
             set
             {
@@ -67,7 +70,7 @@ namespace Microsoft.PowerShell.Commands
             }
             else
             {
-                foreach (AccessRightTypeNames member in Enum.GetValues(typeof(AccessRightTypeNames)))
+                foreach (AccessRightTypeNames member in Enum.GetValues<AccessRightTypeNames>())
                 {
                     typesToExamine.Add(GetRealAccessRightType(member));
                 }
@@ -78,9 +81,8 @@ namespace Microsoft.PowerShell.Commands
                 foreach (string memberName in Enum.GetNames(accessRightType))
                 {
                     int memberValue = (int)Enum.Parse(accessRightType, memberName);
-                    if (!foundAccessRightValues.Contains(memberValue))
+                    if (foundAccessRightValues.Add(memberValue))
                     {
-                        foundAccessRightValues.Add(memberValue);
                         if ((accessMask & memberValue) == memberValue)
                         {
                             foundAccessRightNames.Add(memberName);

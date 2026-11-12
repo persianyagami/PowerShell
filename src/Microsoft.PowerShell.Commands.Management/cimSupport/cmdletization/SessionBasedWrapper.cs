@@ -75,15 +75,14 @@ namespace Microsoft.PowerShell.Cmdletization
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
         protected TSession[] Session
         {
-            get { return _session ??= new TSession[] { this.DefaultSession }; }
+            get
+            {
+                return _session ??= new TSession[] { this.DefaultSession };
+            }
 
             set
             {
-                if (value == null)
-                {
-                    throw new ArgumentNullException("value");
-                }
-
+                ArgumentNullException.ThrowIfNull(value);
                 _session = value;
                 _sessionWasSpecified = true;
             }
@@ -492,8 +491,7 @@ namespace Microsoft.PowerShell.Cmdletization
                 return this.Session;
             }
 
-            var sessionBoundQueryBuilder = queryBuilder as ISessionBoundQueryBuilder<TSession>;
-            if (sessionBoundQueryBuilder != null)
+            if (queryBuilder is ISessionBoundQueryBuilder<TSession> sessionBoundQueryBuilder)
             {
                 TSession sessionOfTheQueryBuilder = sessionBoundQueryBuilder.GetTargetSession();
                 if (sessionOfTheQueryBuilder != null)
@@ -579,8 +577,9 @@ namespace Microsoft.PowerShell.Cmdletization
         /// <param name="passThru"><see langword="true"/> if successful method invocations should emit downstream the <paramref name="objectInstance"/> being operated on.</param>
         public override void ProcessRecord(TObjectInstance objectInstance, MethodInvocationInfo methodInvocationInfo, bool passThru)
         {
-            if (objectInstance == null) throw new ArgumentNullException(nameof(objectInstance));
-            if (methodInvocationInfo == null) throw new ArgumentNullException(nameof(methodInvocationInfo));
+            ArgumentNullException.ThrowIfNull(objectInstance);
+
+            ArgumentNullException.ThrowIfNull(methodInvocationInfo);
 
             foreach (TSession sessionForJob in this.GetSessionsToActAgainst(objectInstance))
             {
@@ -605,7 +604,7 @@ namespace Microsoft.PowerShell.Cmdletization
         /// <param name="methodInvocationInfo">Method invocation details.</param>
         public override void ProcessRecord(MethodInvocationInfo methodInvocationInfo)
         {
-            if (methodInvocationInfo == null) throw new ArgumentNullException(nameof(methodInvocationInfo));
+            ArgumentNullException.ThrowIfNull(methodInvocationInfo);
 
             foreach (TSession sessionForJob in this.GetSessionsToActAgainst(methodInvocationInfo))
             {
@@ -685,10 +684,7 @@ namespace Microsoft.PowerShell.Cmdletization
         public override void StopProcessing()
         {
             Job jobToStop = _parentJob;
-            if (jobToStop != null)
-            {
-                jobToStop.StopJob();
-            }
+            jobToStop?.StopJob();
 
             base.StopProcessing();
         }

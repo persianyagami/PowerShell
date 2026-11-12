@@ -13,8 +13,7 @@ namespace Microsoft.PowerShell
     {
         internal
         ConsoleTextWriter(ConsoleHostUserInterface ui)
-            :
-            base(System.Globalization.CultureInfo.CurrentCulture)
+            : base(System.Globalization.CultureInfo.CurrentCulture)
         {
             Dbg.Assert(ui != null, "ui needs a value");
 
@@ -77,8 +76,8 @@ namespace Microsoft.PowerShell
         void
         Write(char c)
         {
-            ReadOnlySpan<char> c1 = stackalloc char[1] { c };
-            _ui.WriteToConsole(c1, transcribeResult: true);
+            ReadOnlySpan<char> value = [c];
+            _ui.WriteToConsole(value, transcribeResult: true);
         }
 
         public override
